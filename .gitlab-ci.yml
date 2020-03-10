@@ -1,0 +1,129 @@
+stages:
+  - build-package
+  - deploy
+
+variables:
+  MAJOR_RELEASE: "0.1"
+  MINOR_RELEASE: "14"
+
+build-rpm-pg92:
+  stage: build-package
+  image: git.ftc.ru:4567/operations/docker-images/postgres-dev:9.2
+  script:
+    - rpmbuild -v -bb
+        --define "RELEASE_NAME changetable92"
+        --define "MAJOR_RELEASE $MAJOR_RELEASE"
+        --define "MINOR_RELEASE $MINOR_RELEASE"
+        --define "POSTGRES_LIB_DIR /usr/lib64/pgsql"
+        --define "POSTGRES_EXT_DIR /usr/share/pgsql/extension"
+        changetable.spec
+    - mkdir rpm
+    - cp -v ~/rpmbuild/RPMS/x86_64/changetable*.rpm ./rpm/
+  artifacts:
+    paths:
+      - rpm/
+  tags:
+    - dind
+    - docker
+    - ol7-x86
+  only:
+    - master
+
+build-rpm-pg95:
+  stage: build-package
+  image: git.ftc.ru:4567/operations/docker-images/postgres-dev:9.5
+  script:
+    - export PATH="/usr/pgsql-9.5/bin/:$PATH"
+    - rpmbuild -v -bb
+        --define "RELEASE_NAME changetable95"
+        --define "MAJOR_RELEASE $MAJOR_RELEASE"
+        --define "MINOR_RELEASE $MINOR_RELEASE"
+        --define "POSTGRES_LIB_DIR /usr/pgsql-9.5/lib"
+        --define "POSTGRES_EXT_DIR /usr/pgsql-9.5/share/extension"
+        changetable.spec
+    - mkdir rpm
+    - cp -v ~/rpmbuild/RPMS/x86_64/changetable*.rpm ./rpm/
+  artifacts:
+    paths:
+      - rpm/
+  tags:
+    - dind
+    - docker
+    - ol7-x86
+  only:
+    - master
+
+build-rpm-pg96:
+  stage: build-package
+  image: git.ftc.ru:4567/operations/docker-images/postgres-dev:9.6
+  script:
+    - export PATH="/usr/pgsql-9.6/bin/:$PATH"
+    - rpmbuild -v -bb
+        --define "RELEASE_NAME changetable96"
+        --define "MAJOR_RELEASE $MAJOR_RELEASE"
+        --define "MINOR_RELEASE $MINOR_RELEASE"
+        --define "POSTGRES_LIB_DIR /usr/pgsql-9.6/lib"
+        --define "POSTGRES_EXT_DIR /usr/pgsql-9.6/share/extension"
+        changetable.spec
+    - mkdir rpm
+    - cp -v ~/rpmbuild/RPMS/x86_64/changetable*.rpm ./rpm/
+  artifacts:
+    paths:
+      - rpm/
+  tags:
+    - dind
+    - docker
+    - ol7-x86
+  only:
+    - master
+
+build-rpm-pg_10_11:
+  stage: build-package
+  image: git.ftc.ru:4567/operations/docker-images/postgres-dev:10.11
+  script:
+    - export PATH="/usr/pgsql-10/bin/:$PATH"
+    - rpmbuild -v -bb
+        --define "RELEASE_NAME changetable10"
+        --define "MAJOR_RELEASE $MAJOR_RELEASE"
+        --define "MINOR_RELEASE $MINOR_RELEASE"
+        --define "POSTGRES_LIB_DIR /usr/pgsql-10/lib"
+        --define "POSTGRES_EXT_DIR /usr/pgsql-10/share/extension"
+        changetable.spec
+    - mkdir rpm
+    - cp -v ~/rpmbuild/RPMS/x86_64/changetable*.rpm ./rpm/
+  artifacts:
+    paths:
+      - rpm/
+  tags:
+    - dind
+    - docker
+    - ol7-x86
+  only:
+    - master
+
+make-repo:
+  stage: deploy
+  dependencies:
+    - build-rpm-pg92
+    - build-rpm-pg95
+    - build-rpm-pg96
+    - build-rpm-pg_10_11
+  script:
+    - mv -v ./rpm/* /pub/opsrepo
+    - chcon -Rv --type=httpd_sys_content_t /pub/opsrepo/changetable*.rpm
+    - sudo /bin/createrepo --update /pub/opsrepo/
+  tags:
+    - ol7-x86
+    - shellexec
+  only:
+    - master
+
+sync-repo:
+  stage: deploy
+  script:
+    - sudo /usr/bin/mrepo -ugv -r opsrepo || true
+  tags:
+    - rpm
+  only:
+    - master
+
