@@ -1,0 +1,5 @@
+comment = 'Logging and audit utility'
+default_version = '0.1.14'
+relocatable = false
+schema = ss_util
+module_pathname = '$libdir/changetable'

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Return 0 if OK
+
+exit 0
